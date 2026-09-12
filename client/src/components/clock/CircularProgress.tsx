@@ -11,7 +11,7 @@ interface CircularProgressProps {
 }
 
 const TONES = {
-  accent: '#7457EC',
+  accent: '#E7454C',
   emerald: '#0E9F6E',
   amber: '#D97706',
   ink: '#18181B'

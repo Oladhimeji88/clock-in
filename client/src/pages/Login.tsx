@@ -128,7 +128,7 @@ export function Login() {
                   type="checkbox"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
-                  className="h-4 w-4 rounded border-ink-300 text-accent-600 focus:ring-accent-500/30" />
+                  className="h-4 w-4 rounded border-ink-300 accent-accent-600 focus:ring-accent-500/30" />
                 
                 Remember me
               </label>
