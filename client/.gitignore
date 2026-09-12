@@ -27,3 +27,4 @@ dist-ssr
 vite.config.js
 vite.config.d.ts
 .tsbuild-node
+.vercel
