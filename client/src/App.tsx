@@ -1,47 +1,53 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Toaster } from "sonner";
-import { useAuthStore } from "@/lib/auth-store";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import HrLayout from "@/components/HrLayout";
-import EmployeeLayout from "@/components/EmployeeLayout";
-import Login from "@/pages/Login";
-import Dashboard from "@/pages/hr/Dashboard";
-import Employees from "@/pages/hr/Employees";
-import ClockIn from "@/pages/employee/ClockIn";
-import FullscreenClock from "@/pages/employee/FullscreenClock";
-import Settings from "@/pages/employee/Settings";
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { AppProvider } from './contexts/AppContext';
+import { HRLayout } from './layouts/HRLayout';
+import { EmployeeLayout } from './layouts/EmployeeLayout';
+import { Login } from './pages/Login';
+import { HRDashboard } from './pages/hr/Dashboard';
+import { Employees } from './pages/hr/Employees';
+import { EmployeeDetail } from './pages/hr/EmployeeDetail';
+import { Attendance } from './pages/hr/Attendance';
+import { TimeRecords } from './pages/hr/TimeRecords';
+import { LeaveAdmin } from './pages/hr/Leave';
+import { Reports } from './pages/hr/Reports';
+import { HRSettings } from './pages/hr/Settings';
+import { EmployeeClock } from './pages/employee/Clock';
+import { EmployeeHistory } from './pages/employee/History';
+import { CustomizeClock } from './pages/employee/CustomizeClock';
+import { EmployeeSettings } from './pages/employee/Settings';
+import { FullScreenClock } from './pages/employee/FullScreenClock';
 
-function RootRedirect() {
-  const user = useAuthStore((s) => s.user);
-  if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={user.role === "hr" ? "/hr" : "/app"} replace />;
-}
-
-export default function App() {
+export function App() {
   return (
-    <BrowserRouter>
-      <Toaster theme="dark" position="top-right" richColors />
-      <Routes>
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/login" element={<Login />} />
+    <AppProvider>
+      <BrowserRouter>
+        <Toaster position="bottom-center" toastOptions={{ style: { borderRadius: '12px' } }} />
+        <Routes>
+          <Route path="/" element={<Login />} />
 
-        <Route element={<ProtectedRoute role="hr" />}>
-          <Route path="/hr" element={<HrLayout />}>
-            <Route index element={<Dashboard />} />
+          <Route path="/hr" element={<HRLayout />}>
+            <Route index element={<HRDashboard />} />
             <Route path="employees" element={<Employees />} />
+            <Route path="employees/:employeeId" element={<EmployeeDetail />} />
+            <Route path="attendance" element={<Attendance />} />
+            <Route path="time-records" element={<TimeRecords />} />
+            <Route path="leave" element={<LeaveAdmin />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<HRSettings />} />
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute role="employee" />}>
-          <Route path="/app" element={<EmployeeLayout />}>
-            <Route index element={<ClockIn />} />
-            <Route path="fullscreen" element={<FullscreenClock />} />
-            <Route path="settings" element={<Settings />} />
+          <Route path="/me/fullscreen" element={<FullScreenClock />} />
+          <Route path="/me" element={<EmployeeLayout />}>
+            <Route index element={<EmployeeClock />} />
+            <Route path="history" element={<EmployeeHistory />} />
+            <Route path="customize" element={<CustomizeClock />} />
+            <Route path="settings" element={<EmployeeSettings />} />
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  );
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AppProvider>);
+
 }

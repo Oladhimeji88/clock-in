@@ -1,105 +1,160 @@
-import { type FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Clock3, Lock, Mail, ArrowRight } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { AlertCircleIcon, ArrowRightIcon, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { Brand } from '../components/Brand';
+import { Button } from '../components/ui/Button';
+import { Field, Input } from '../components/ui/Field';
+import { ClockFace } from '../components/clock/ClockFace';
+import { useApp } from '../contexts/AppContext';
+import { useNow } from '../hooks/useNow';
 
-export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const login = useAuthStore((s) => s.login);
+export function Login() {
+  const { login, currentUser, company, authReady } = useApp();
   const navigate = useNavigate();
+  const now = useNow();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
+  if (authReady && currentUser) return <Navigate to={currentUser.role === 'hr' ? '/hr' : '/me'} replace />;
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const { data } = await api.post("/auth/login", { email, password });
-      login(data.token, data.user);
-      navigate(data.user.role === "hr" ? "/hr" : "/app", { replace: true });
-    } catch (err: any) {
-      setError(err?.response?.data?.error ?? "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    setError(null);
+    setBusy(true);
+    const result = await login(email, password);
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.message ?? 'Unable to sign in.');
+      return;
     }
-  }
+    navigate(result.role === 'hr' ? '/hr' : '/me');
+  };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface-0 px-4">
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-brand-600/20 blur-[120px]" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative w-full max-w-sm"
-      >
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-brand-400 to-brand-700 shadow-glow-brand">
-            <Clock3 className="h-6 w-6 text-white" />
+    <div className="flex min-h-screen w-full bg-canvas">
+      <div className="relative hidden w-[46%] max-w-[620px] flex-col justify-between bg-ink-950 p-10 lg:flex">
+        <Brand inverted />
+        <div className="space-y-8">
+          <ClockFace
+            settings={{
+              style: 'segmented',
+              theme: 'dark',
+              hour12: false,
+              showSeconds: true,
+              showDate: true,
+              showDay: true,
+              showStatus: false,
+              showWorked: false,
+              showRemaining: false,
+              showProgress: false
+            }}
+            now={now}
+            workedMs={0}
+            remainingMs={0}
+            progress={0}
+            status="not_in"
+            expectedHours={8}
+            size="md"
+            className="border-white/10" />
+          
+          <div>
+            <h2 className="max-w-sm text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-white">
+              Every hour accounted for, without the paperwork.
+            </h2>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/50">
+              Clock in, take breaks, request leave — and give People Ops a live view of the whole company.
+            </p>
           </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">ChronoTrack</h1>
-          <p className="mt-1 text-sm text-slate-400">Sign in to your workspace</p>
         </div>
+        <p className="text-xs text-white/30">{company.name} · Workforce time tracking</p>
+      </div>
 
-        <form
-          onSubmit={onSubmit}
-          className="rounded-2xl border border-surface-border bg-surface-2 p-6 shadow-card"
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">Email address</label>
+      <div className="flex flex-1 items-center justify-center px-5 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+          className="w-full max-w-[380px]">
+          
+          <div className="lg:hidden">
+            <Brand size="lg" />
+          </div>
+          <h1 className="mt-8 text-[26px] font-semibold tracking-[-0.02em] text-ink-900 lg:mt-0">Welcome back</h1>
+          <p className="mt-1.5 text-sm text-ink-500">Sign in to your {company.name} workspace.</p>
+
+          <form onSubmit={submit} className="mt-7 space-y-4">
+            <Field label="Work email" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com" />
+
+            </Field>
+
+            <Field label="Password" htmlFor="password">
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <Input
-                  type="email"
+                  id="password"
+                  type={show ? 'text' : 'password'}
+                  autoComplete="current-password"
                   required
-                  autoFocus
-                  placeholder="you@company.com"
-                  className="pl-9"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">Password</label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                <Input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  className="pl-9"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                />
+                  className="pr-11" />
+                
+                <button
+                  type="button"
+                  onClick={() => setShow((s) => !s)}
+                  aria-label={show ? 'Hide password' : 'Show password'}
+                  className="absolute right-1.5 top-1.5 rounded-md p-1.5 text-ink-400 transition-colors duration-150 hover:bg-ink-100 hover:text-ink-700">
+                  
+                  {show ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                </button>
               </div>
+            </Field>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-[13px] text-ink-600">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-accent-600 focus:ring-accent-500/30" />
+                
+                Remember me
+              </label>
+              <button type="button" className="text-[13px] font-medium text-accent-700 hover:text-accent-800">
+                Forgot password?
+              </button>
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-danger-500/10 px-3 py-2 text-xs text-danger-400 border border-danger-500/20">
+            {error &&
+            <div className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">
+                <AlertCircleIcon className="mt-px h-4 w-4 shrink-0" />
                 {error}
               </div>
-            )}
+            }
 
-            <Button type="submit" className="w-full" size="lg" loading={loading}>
-              Sign in
-              <ArrowRight className="h-4 w-4" />
+            <Button type="submit" variant="primary" size="lg" fullWidth disabled={busy}>
+              {busy ? 'Signing in…' : 'Log in'}
+              {!busy && <ArrowRightIcon className="h-4 w-4" />}
             </Button>
-          </div>
-        </form>
+          </form>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Employee accounts are created by your HR administrator.
-        </p>
-      </motion.div>
-    </div>
-  );
+          <p className="mt-6 text-center text-xs text-ink-400">
+            Employee accounts are created by your HR administrator.
+          </p>
+        </motion.div>
+      </div>
+    </div>);
+
 }

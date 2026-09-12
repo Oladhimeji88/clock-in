@@ -1,62 +1,129 @@
-import { useEffect, useRef, useState } from "react";
-import { Maximize, Minimize } from "lucide-react";
-import { ClockFace } from "@/components/clock-faces/ClockFace";
-import { StatusBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useAttendanceStatus } from "@/hooks/useAttendanceStatus";
-import { formatDuration } from "@/lib/utils";
+import { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { MinimizeIcon, SettingsIcon, XIcon } from 'lucide-react';
+import { ClockFace } from '../../components/clock/ClockFace';
+import { useApp } from '../../contexts/AppContext';
+import { useNow } from '../../hooks/useNow';
+import { sessionTotals } from '../../utils/time';
+import { cn } from '../../utils/cn';
+import type { ClockStyle, ClockTheme } from '../../types';
 
-export default function FullscreenClock() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const { status, workedSeconds, targetHours, clockStyle } = useAttendanceStatus();
+const STYLES: ClockStyle[] = ['segmented', 'digital', 'minimal', 'modern', 'retro'];
+const THEMES: ClockTheme[] = ['dark', 'light', 'minimal', 'glass', 'retro'];
 
-  useEffect(() => {
-    if (clockStyle) document.documentElement.dataset.accent = clockStyle.accent;
-  }, [clockStyle]);
+export function FullScreenClock() {
+  const { currentUser, session, clockSettings, saveClockSettings } = useApp();
+  const now = useNow();
+  const navigate = useNavigate();
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
+  if (!currentUser) return <Navigate to="/" replace />;
 
-  async function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      await containerRef.current?.requestFullscreen();
-    } else {
-      await document.exitFullscreen();
-    }
-  }
+  const totals = sessionTotals(session, now, currentUser.expectedHours);
+  const light = clockSettings.theme === 'light' || clockSettings.theme === 'minimal';
+
+  const requestNativeFullscreen = () => {
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => undefined);else
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
+  };
 
   return (
     <div
-      ref={containerRef}
-      className="flex min-h-[70vh] flex-col items-center justify-center rounded-2xl border border-surface-border bg-surface-2 p-10 data-[fs=true]:min-h-screen data-[fs=true]:rounded-none"
-      data-fs={isFullscreen}
-    >
-      <div className="mb-6">
-        <StatusBadge status={status} />
+      className={cn(
+        'relative flex min-h-screen w-full items-center justify-center',
+        clockSettings.theme === 'retro' ? 'bg-[#0a0704]' : light ? 'bg-canvas' : 'bg-ink-950'
+      )}>
+      
+      <ClockFace
+        settings={clockSettings}
+        now={now}
+        workedMs={totals.workedMs}
+        remainingMs={totals.remainingMs}
+        progress={totals.progress}
+        status={session.status}
+        expectedHours={currentUser.expectedHours}
+        size="xl"
+        className="max-w-[1400px] border-transparent bg-transparent shadow-none" />
+      
+
+      <div className="absolute right-4 top-4 flex items-center gap-1.5">
+        <button
+          onClick={requestNativeFullscreen}
+          aria-label="Toggle browser full screen"
+          className={cn(
+            'rounded-lg p-2 transition-colors duration-150',
+            light ? 'text-ink-400 hover:bg-ink-200' : 'text-white/40 hover:bg-white/10 hover:text-white'
+          )}>
+          
+          <MinimizeIcon className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => setPanelOpen((p) => !p)}
+          aria-label="Clock settings"
+          className={cn(
+            'rounded-lg p-2 transition-colors duration-150',
+            light ? 'text-ink-400 hover:bg-ink-200' : 'text-white/40 hover:bg-white/10 hover:text-white'
+          )}>
+          
+          <SettingsIcon className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => navigate('/me')}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors duration-150',
+            light ? 'text-ink-500 hover:bg-ink-200' : 'text-white/50 hover:bg-white/10 hover:text-white'
+          )}>
+          
+          <XIcon className="h-4 w-4" />
+          Exit full screen
+        </button>
       </div>
 
-      <ClockFace face={clockStyle?.face ?? "digital"} size="lg" />
-
-      <div className="mt-8 flex items-center gap-6 text-slate-400">
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-wide">Worked Today</p>
-          <p className="mt-1 font-mono text-xl font-semibold text-white">{formatDuration(workedSeconds)}</p>
+      {panelOpen &&
+      <div className="absolute right-4 top-16 w-[260px] rounded-xl border border-ink-200 bg-surface p-4 shadow-pop">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">Style</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {STYLES.map((s) =>
+          <button
+            key={s}
+            onClick={() => saveClockSettings({ ...clockSettings, style: s })}
+            className={cn(
+              'rounded-lg border px-2.5 py-1 text-[13px] capitalize transition-colors duration-150',
+              clockSettings.style === s ?
+              'border-accent-600 bg-accent-50 text-accent-800' :
+              'border-ink-200 text-ink-600 hover:border-ink-300'
+            )}>
+            
+                {s}
+              </button>
+          )}
+          </div>
+          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">Theme</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {THEMES.map((t) =>
+          <button
+            key={t}
+            onClick={() => saveClockSettings({ ...clockSettings, theme: t })}
+            className={cn(
+              'rounded-lg border px-2.5 py-1 text-[13px] capitalize transition-colors duration-150',
+              clockSettings.theme === t ?
+              'border-accent-600 bg-accent-50 text-accent-800' :
+              'border-ink-200 text-ink-600 hover:border-ink-300'
+            )}>
+            
+                {t}
+              </button>
+          )}
+          </div>
+          <button
+          onClick={() => navigate('/me/customize')}
+          className="mt-4 text-[13px] font-medium text-accent-700 hover:text-accent-800">
+          
+            All clock settings →
+          </button>
         </div>
-        <div className="h-8 w-px bg-surface-border" />
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-wide">Target</p>
-          <p className="mt-1 font-mono text-xl font-semibold text-white">{targetHours}h</p>
-        </div>
-      </div>
+      }
+    </div>);
 
-      <Button variant="secondary" className="mt-10" onClick={toggleFullscreen}>
-        {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-        {isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
-      </Button>
-    </div>
-  );
 }
