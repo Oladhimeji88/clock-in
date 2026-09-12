@@ -88,7 +88,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      <aside className="hidden w-[248px] shrink-0 border-r border-ink-200 lg:block">{content}</aside>
+      <aside className="hidden h-screen w-[248px] shrink-0 overflow-y-auto border-r border-ink-200 lg:block">{content}</aside>
       {mobileOpen &&
       <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-ink-950/40" onClick={onClose} />

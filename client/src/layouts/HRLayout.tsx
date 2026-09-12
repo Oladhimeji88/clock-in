@@ -13,11 +13,11 @@ export function HRLayout() {
   if (currentUser.role !== 'hr') return <Navigate to="/me" replace />;
 
   return (
-    <div className="flex min-h-screen w-full bg-canvas">
+    <div className="flex h-screen w-full overflow-hidden bg-canvas">
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onOpenNav={() => setMobileOpen(true)} />
-        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>
       </div>
