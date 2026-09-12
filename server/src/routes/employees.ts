@@ -14,6 +14,7 @@ const createSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().min(1),
+  role: z.enum(["employee", "hr"]).default("employee"),
   department: z.string().default(""),
   jobTitle: z.string().default(""),
   expectedHours: z.number().min(0).max(24).default(8),
@@ -45,12 +46,13 @@ employeesRouter.post("/", async (req, res) => {
   await db.run(
     `INSERT INTO users
       (id, email, password_hash, name, role, department, job_title, expected_hours, working_days, start_time, end_time, break_allowance_min, account_status)
-     VALUES (?, ?, ?, ?, 'employee', ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.email.toLowerCase(),
       passwordHash,
       data.name,
+      data.role,
       data.department,
       data.jobTitle,
       data.expectedHours,

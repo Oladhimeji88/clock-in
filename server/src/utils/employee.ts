@@ -63,6 +63,7 @@ export async function serializeEmployee(row: any) {
     endTime: row.end_time,
     breakAllowanceMin: row.break_allowance_min,
     accountStatus: row.account_status,
+    avatarUrl: row.avatar ?? null,
     initials: initialsFor(row.name),
     tone: toneFor(row.id),
     lastClockIn: await lastClockInFor(row.id),

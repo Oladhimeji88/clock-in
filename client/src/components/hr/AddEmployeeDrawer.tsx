@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { Field, Input, Select } from '../ui/Field';
 import { useApp } from '../../contexts/AppContext';
 import { cn } from '../../utils/cn';
-import type { AccountStatus, Employee } from '../../types';
+import type { AccountStatus, Employee, Role } from '../../types';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -15,6 +15,7 @@ const EMPTY = {
   name: '',
   email: '',
   password: '',
+  role: 'employee' as Role,
   department: '',
   jobTitle: '',
   expectedHours: 8,
@@ -62,6 +63,7 @@ export function AddEmployeeDrawer({ open, onClose }: {open: boolean;onClose: () 
         name: form.name,
         email: form.email,
         password: form.password,
+        role: form.role,
         department: form.department,
         jobTitle: form.jobTitle,
         expectedHours: Number(form.expectedHours),
@@ -99,19 +101,25 @@ export function AddEmployeeDrawer({ open, onClose }: {open: boolean;onClose: () 
             setForm(EMPTY);
             setCreated(null);
           }}>
-          
+
               Add another
             </Button>
-            <Button
-          variant="primary"
-          onClick={() => {
-            const id = created.id;
-            close();
-            navigate(`/hr/employees/${id}`);
-          }}>
-          
-              View employee
-            </Button>
+            {created.role === 'employee' ?
+          <Button
+            variant="primary"
+            onClick={() => {
+              const id = created.id;
+              close();
+              navigate(`/hr/employees/${id}`);
+            }}>
+
+                View employee
+              </Button> :
+
+          <Button variant="primary" onClick={close}>
+                Done
+              </Button>
+          }
           </> :
 
       <>
@@ -136,19 +144,29 @@ export function AddEmployeeDrawer({ open, onClose }: {open: boolean;onClose: () 
               <CheckIcon className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-[15px] font-semibold text-emerald-900">{created.name} is ready to clock in</p>
-              <p className="text-[13px] text-emerald-700">Account active · {created.department}</p>
+              <p className="text-[15px] font-semibold text-emerald-900">
+                {created.name} {created.role === 'hr' ? 'has HR access' : 'is ready to clock in'}
+              </p>
+              <p className="text-[13px] text-emerald-700">
+                {created.role === 'hr' ? 'HR Administrator' : `Account active · ${created.department}`}
+              </p>
             </div>
           </div>
 
           <dl className="divide-y divide-ink-100 overflow-hidden rounded-xl border border-ink-200">
-            {[
+            {(created.role === 'hr' ?
+          [
+          ['Email', created.email],
+          ['Temporary password', form.password],
+          ['Role', 'HR Administrator']] :
+
+          [
           ['Email', created.email],
           ['Temporary password', form.password],
           ['Expected hours', `${created.expectedHours} hrs / day`],
           ['Schedule', `${created.startTime} – ${created.endTime}`],
           ['Working days', created.workingDays.join(', ')],
-          ['Break allowance', `${created.breakAllowanceMin} min`]].
+          ['Break allowance', `${created.breakAllowanceMin} min`]]).
           map(([k, v]) =>
           <div key={k} className="flex items-center justify-between gap-4 px-4 py-2.5">
                 <dt className="text-[13px] text-ink-500">{k}</dt>
@@ -202,6 +220,15 @@ export function AddEmployeeDrawer({ open, onClose }: {open: boolean;onClose: () 
 
           </Field>
 
+          <Field label="Role" htmlFor="emp-role" hint={form.role === 'hr' ? 'Full access to the HR console, including managing other accounts.' : 'Clocks in/out and shows up in the employee directory.'}>
+            <Select id="emp-role" value={form.role} onChange={(e) => set('role', e.target.value as Role)}>
+              <option value="employee">Employee</option>
+              <option value="hr">HR Administrator</option>
+            </Select>
+          </Field>
+
+          {form.role === 'employee' &&
+        <>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Department" htmlFor="emp-dept">
               <Input
@@ -291,6 +318,8 @@ export function AddEmployeeDrawer({ open, onClose }: {open: boolean;onClose: () 
               </Field>
             </div>
           </div>
+          </>
+        }
 
           <Field label="Account status" htmlFor="emp-status">
             <Select

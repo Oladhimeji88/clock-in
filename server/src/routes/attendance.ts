@@ -16,22 +16,57 @@ export const attendanceRouter = Router();
 
 const GRACE_MINUTES = 10;
 
+async function insertEvent(userId: string, type: AttendanceEvent["type"], ts: number = Date.now()) {
+  await db.run("INSERT INTO attendance_events (id, user_id, type, ts) VALUES (?, ?, ?, ?)", [
+    crypto.randomUUID(),
+    userId,
+    type,
+    ts,
+  ]);
+}
+
+let autoClockoutHoursCache: { value: number | null; fetchedAt: number } | null = null;
+
+/** Company-wide auto-clockout threshold, cached briefly to avoid a query on every request. */
+async function getAutoClockoutHours(): Promise<number | null> {
+  if (autoClockoutHoursCache && Date.now() - autoClockoutHoursCache.fetchedAt < 30_000) {
+    return autoClockoutHoursCache.value;
+  }
+  const row = (await db.get("SELECT auto_clockout_hours FROM company_settings WHERE id = 'default'")) as
+    | { auto_clockout_hours: number | null }
+    | undefined;
+  const value = row?.auto_clockout_hours ?? null;
+  autoClockoutHoursCache = { value, fetchedAt: Date.now() };
+  return value;
+}
+
+/**
+ * If the employee has been clocked in (working or on break) longer than the
+ * company's auto-clockout threshold, insert a clock_out event at the moment
+ * the threshold was crossed. Idempotent — once inserted, status becomes
+ * 'out' and this is a no-op until the next clock-in.
+ */
+async function enforceAutoClockout(userId: string, events: AttendanceEvent[]): Promise<AttendanceEvent[]> {
+  const hours = await getAutoClockoutHours();
+  if (!hours) return events;
+
+  const session = deriveSession(events);
+  if ((session.status !== "working" && session.status !== "break") || !session.clockInAt) return events;
+
+  const cutoff = session.clockInAt + hours * 3_600_000;
+  if (Date.now() < cutoff) return events;
+
+  await insertEvent(userId, "clock_out", cutoff);
+  return [...events, { type: "clock_out", ts: cutoff }];
+}
+
 async function getTodayEvents(userId: string): Promise<AttendanceEvent[]> {
   const todayStart = startOfDay(new Date());
   const rows = await db.all(
     "SELECT type, ts FROM attendance_events WHERE user_id = ? AND ts >= ? ORDER BY ts ASC",
     [userId, todayStart]
   );
-  return rows as unknown as AttendanceEvent[];
-}
-
-async function insertEvent(userId: string, type: AttendanceEvent["type"]) {
-  await db.run("INSERT INTO attendance_events (id, user_id, type, ts) VALUES (?, ?, ?, ?)", [
-    crypto.randomUUID(),
-    userId,
-    type,
-    Date.now(),
-  ]);
+  return enforceAutoClockout(userId, rows as unknown as AttendanceEvent[]);
 }
 
 async function hasApprovedLeaveOn(employeeId: string, day: string): Promise<boolean> {
@@ -177,10 +212,11 @@ attendanceRouter.get("/today", ...hrOnly, async (_req, res) => {
     employees.map(async (employee: any) => {
       const workingDays = JSON.parse(employee.working_days) as string[];
       const dayStart = startOfDay(today);
-      const events = (await db.all(
+      const rawEvents = (await db.all(
         "SELECT type, ts FROM attendance_events WHERE user_id = ? AND ts >= ? ORDER BY ts ASC",
         [employee.id, dayStart]
       )) as unknown as AttendanceEvent[];
+      const events = await enforceAutoClockout(employee.id, rawEvents);
 
       const record = buildDayRecord({
         date: today,

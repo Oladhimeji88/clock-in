@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BellIcon, ChevronDownIcon, MenuIcon, SearchIcon } from 'lucide-react';
 import { titleForPath } from './nav';
+import { Avatar } from '../ui/Avatar';
 import { useApp } from '../../contexts/AppContext';
-import { cn } from '../../utils/cn';
 
 interface TopbarProps {
   onOpenNav: () => void;
@@ -60,9 +60,7 @@ export function Topbar({ onOpenNav }: TopbarProps) {
             }}
             className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors duration-150 hover:bg-ink-50">
             
-                <span className={cn('grid h-8 w-8 place-items-center rounded-full text-xs font-semibold', e.tone)}>
-                  {e.initials}
-                </span>
+                <Avatar name={e.name} tone={e.tone} avatarUrl={e.avatarUrl} size={32} className="text-xs" />
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-ink-900">{e.name}</span>
                   <span className="block truncate text-xs text-ink-400">{e.department}</span>
@@ -123,14 +121,12 @@ export function Topbar({ onOpenNav }: TopbarProps) {
           onClick={() => setPanel(panel === 'profile' ? 'none' : 'profile')}
           className="flex items-center gap-2 rounded-lg p-1 pr-2 transition-colors duration-150 hover:bg-ink-100">
           
-          <span
-            className={cn(
-              'grid h-8 w-8 place-items-center rounded-full text-xs font-semibold',
-              currentUser?.tone ?? 'bg-ink-100'
-            )}>
-            
-            {currentUser?.initials}
-          </span>
+          <Avatar
+            name={currentUser?.name ?? ''}
+            tone={currentUser?.tone ?? 'bg-ink-100'}
+            avatarUrl={currentUser?.avatarUrl}
+            size={32}
+            className="text-xs" />
           <ChevronDownIcon className="h-3.5 w-3.5 text-ink-400" />
         </button>
         {panel === 'profile' &&

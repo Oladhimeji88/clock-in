@@ -75,6 +75,7 @@ export interface NewEmployeeInput {
   name: string;
   email: string;
   password: string;
+  role: 'employee' | 'hr';
   department: string;
   jobTitle: string;
   expectedHours: number;
@@ -83,6 +84,12 @@ export interface NewEmployeeInput {
   endTime: string;
   breakAllowanceMin: number;
   accountStatus: AccountStatus;
+}
+
+export interface CompanySettings {
+  name: string;
+  timezone: string;
+  autoClockoutHours: number | null;
 }
 
 export interface EmployeePatch {
@@ -111,14 +118,18 @@ export const api = {
     request<{ok: boolean;}>('/auth/password', {
       method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword })
-    })
+    }),
+    uploadAvatar: (avatarUrl: string) =>
+    request<Employee>('/auth/avatar', { method: 'PUT', body: JSON.stringify({ avatarUrl }) }),
+    removeAvatar: () => request<Employee>('/auth/avatar', { method: 'DELETE' })
   },
   employees: {
     list: () => request<Employee[]>('/employees'),
     create: (data: NewEmployeeInput) =>
     request<Employee>('/employees', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, patch: EmployeePatch) =>
-    request<Employee>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(patch) })
+    request<Employee>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
+    remove: (id: string) => request<{ok: boolean;}>(`/employees/${id}`, { method: 'DELETE' })
   },
   attendance: {
     session: () => request<ClockSession>('/attendance/session'),
@@ -143,8 +154,8 @@ export const api = {
     request<LeaveRequest>(`/leave/${id}`, { method: 'PUT', body: JSON.stringify({ status }) })
   },
   company: {
-    get: () => request<{name: string;timezone: string;}>('/company'),
-    update: (patch: {name?: string;timezone?: string;}) =>
-    request<{name: string;timezone: string;}>('/company', { method: 'PUT', body: JSON.stringify(patch) })
+    get: () => request<CompanySettings>('/company'),
+    update: (patch: Partial<CompanySettings>) =>
+    request<CompanySettings>('/company', { method: 'PUT', body: JSON.stringify(patch) })
   }
 };

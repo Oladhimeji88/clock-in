@@ -108,6 +108,20 @@ await db.exec(`
   );
 `);
 
+// Idempotent column additions for databases created before these fields
+// existed — CREATE TABLE IF NOT EXISTS above only helps brand-new databases.
+async function addColumnIfMissing(table: string, column: string, ddl: string) {
+  try {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/duplicate column/i.test(message)) throw err;
+  }
+}
+
+await addColumnIfMissing("users", "avatar", "TEXT");
+await addColumnIfMissing("company_settings", "auto_clockout_hours", "REAL");
+
 async function seedDefaults() {
   const existingHr = await db.get("SELECT id FROM users WHERE role = 'hr' LIMIT 1");
   if (!existingHr) {

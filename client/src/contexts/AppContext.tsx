@@ -8,7 +8,7 @@ import type {
   Role,
   TodayRecord } from
 '../types';
-import { api, ApiError, getToken, setToken, type NewEmployeeInput } from '../api/client';
+import { api, ApiError, getToken, setToken, type CompanySettings, type NewEmployeeInput } from '../api/client';
 
 interface LoginResult {
   ok: boolean;
@@ -18,7 +18,7 @@ interface LoginResult {
 
 interface AppState {
   authReady: boolean;
-  company: {name: string;timezone: string;};
+  company: CompanySettings;
   currentUser: Employee | null;
   employees: Employee[];
   employeeById: Record<string, Employee>;
@@ -31,6 +31,7 @@ interface AppState {
   logout: () => void;
   addEmployee: (input: NewEmployeeInput) => Promise<Employee>;
   updateEmployee: (id: string, patch: Partial<Employee> & {password?: string;}) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
   setLeaveStatus: (id: string, status: LeaveStatus) => Promise<void>;
   submitLeave: (input: {type: LeaveRequest['type'];startDate: string;endDate: string;reason: string;}) => Promise<void>;
   clockIn: () => Promise<void>;
@@ -39,11 +40,12 @@ interface AppState {
   endBreak: () => Promise<void>;
   resetDay: () => Promise<void>;
   saveClockSettings: (settings: ClockSettings) => Promise<void>;
-  updateCompany: (patch: {name?: string;timezone?: string;}) => Promise<void>;
+  updateCompany: (patch: Partial<CompanySettings>) => Promise<void>;
+  updateAvatar: (dataUrl: string | null) => Promise<void>;
 }
 
 const EMPTY_SESSION: ClockSession = { status: 'not_in', clockInAt: null, clockOutAt: null, breaks: [] };
-const DEFAULT_COMPANY = { name: 'Your Company', timezone: 'GMT+0 · London' };
+const DEFAULT_COMPANY: CompanySettings = { name: 'Your Company', timezone: 'GMT+0 · London', autoClockoutHours: null };
 
 const AppContext = createContext<AppState | null>(null);
 
@@ -170,7 +172,10 @@ export function AppProvider({ children }: {children: React.ReactNode;}) {
   const addEmployee = useCallback(async (input: NewEmployeeInput) => {
     const created = await api.employees.create(input);
     mutationVersion.current++;
-    setEmployees((prev) => [created, ...prev]);
+    // HR accounts created here don't show in the employee directory.
+    if (created.role === 'employee') {
+      setEmployees((prev) => [created, ...prev]);
+    }
     return created;
   }, []);
 
@@ -183,6 +188,12 @@ export function AppProvider({ children }: {children: React.ReactNode;}) {
     },
     []
   );
+
+  const deleteEmployee = useCallback(async (id: string) => {
+    await api.employees.remove(id);
+    mutationVersion.current++;
+    setEmployees((prev) => prev.filter((e) => e.id !== id));
+  }, []);
 
   const setLeaveStatus = useCallback(async (id: string, status: LeaveStatus) => {
     const updated = await api.leave.setStatus(id, status);
@@ -229,9 +240,14 @@ export function AppProvider({ children }: {children: React.ReactNode;}) {
     setCurrentUser((prev) => prev ? { ...prev, clockSettings: settings } : prev);
   }, []);
 
-  const updateCompany = useCallback(async (patch: {name?: string;timezone?: string;}) => {
+  const updateCompany = useCallback(async (patch: Partial<CompanySettings>) => {
     const updated = await api.company.update(patch);
     setCompany(updated);
+  }, []);
+
+  const updateAvatar = useCallback(async (dataUrl: string | null) => {
+    const updated = dataUrl ? await api.auth.uploadAvatar(dataUrl) : await api.auth.removeAvatar();
+    setCurrentUser(updated);
   }, []);
 
   const value: AppState = {
@@ -249,6 +265,7 @@ export function AppProvider({ children }: {children: React.ReactNode;}) {
     logout,
     addEmployee,
     updateEmployee,
+    deleteEmployee,
     setLeaveStatus,
     submitLeave,
     clockIn,
@@ -257,7 +274,8 @@ export function AppProvider({ children }: {children: React.ReactNode;}) {
     endBreak,
     resetDay,
     saveClockSettings,
-    updateCompany
+    updateCompany,
+    updateAvatar
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

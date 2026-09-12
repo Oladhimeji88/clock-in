@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { ClockIcon, HistoryIcon, LogOutIcon, SettingsIcon, SlidersHorizontalIcon } from 'lucide-react';
 import { Brand } from '../components/Brand';
+import { Avatar } from '../components/ui/Avatar';
 import { MiniClockWidget } from '../components/clock/MiniClockWidget';
 import { useApp } from '../contexts/AppContext';
 import { cn } from '../utils/cn';
@@ -47,11 +48,7 @@ export function EmployeeLayout() {
               <span className="block text-[13px] font-semibold text-ink-900">{currentUser.name}</span>
               <span className="block text-xs text-ink-400">{company.name}</span>
             </span>
-            <span
-              className={cn('grid h-9 w-9 place-items-center rounded-full text-[13px] font-semibold', currentUser.tone)}>
-              
-              {currentUser.initials}
-            </span>
+            <Avatar name={currentUser.name} tone={currentUser.tone} avatarUrl={currentUser.avatarUrl} size={36} className="text-[13px]" />
             <button
               onClick={() => {
                 logout();

@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOutIcon, XIcon } from 'lucide-react';
 import { Brand } from '../Brand';
+import { Avatar } from '../ui/Avatar';
 import { hrNav } from './nav';
 import { useApp } from '../../contexts/AppContext';
 import { cn } from '../../utils/cn';
@@ -59,14 +60,12 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       <div className="border-t border-ink-100 p-3">
         <div className="flex items-center gap-2.5 rounded-lg p-2">
-          <span
-          className={cn(
-            'grid h-9 w-9 shrink-0 place-items-center rounded-full text-[13px] font-semibold',
-            currentUser?.tone ?? 'bg-ink-100 text-ink-600'
-          )}>
-          
-            {currentUser?.initials}
-          </span>
+          <Avatar
+          name={currentUser?.name ?? ''}
+          tone={currentUser?.tone ?? 'bg-ink-100 text-ink-600'}
+          avatarUrl={currentUser?.avatarUrl}
+          size={36}
+          className="text-[13px]" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] font-semibold text-ink-900">{currentUser?.name}</span>
             <span className="block truncate text-xs text-ink-400">{company.name}</span>

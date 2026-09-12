@@ -17,6 +17,7 @@ export interface Employee {
   endTime: string;
   breakAllowanceMin: number;
   accountStatus: AccountStatus;
+  avatarUrl: string | null;
   initials: string;
   tone: string;
   lastClockIn: string;

@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { KeyRoundIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, SearchIcon, UserMinusIcon, EyeIcon } from 'lucide-react';
+import { KeyRoundIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, SearchIcon, UserMinusIcon, UserCheckIcon, Trash2Icon, EyeIcon } from 'lucide-react';
 import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { Select } from '../../components/ui/Field';
+import { Avatar } from '../../components/ui/Avatar';
 import { AddEmployeeDrawer } from '../../components/hr/AddEmployeeDrawer';
 import { EditEmployeeModal } from '../../components/hr/EditEmployeeModal';
 import { useApp } from '../../contexts/AppContext';
@@ -13,7 +14,7 @@ import { cn } from '../../utils/cn';
 import type { Employee } from '../../types';
 
 export function Employees() {
-  const { employees, updateEmployee, departments } = useApp();
+  const { employees, updateEmployee, deleteEmployee, departments } = useApp();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [dept, setDept] = useState('All departments');
@@ -33,6 +34,17 @@ export function Employees() {
     }),
     [employees, query, dept, status]
   );
+
+  const removeEmployee = async (employee: Employee) => {
+    setMenuId(null);
+    if (!window.confirm(`Permanently delete ${employee.name}'s account? This cannot be undone.`)) return;
+    try {
+      await deleteEmployee(employee.id);
+      toast.success(`${employee.name} deleted`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete employee');
+    }
+  };
 
   return (
     <div className="space-y-6" onClick={() => setMenuId(null)}>
@@ -99,9 +111,7 @@ export function Employees() {
                 
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <span className={cn('grid h-9 w-9 place-items-center rounded-full text-xs font-semibold', e.tone)}>
-                        {e.initials}
-                      </span>
+                      <Avatar name={e.name} tone={e.tone} avatarUrl={e.avatarUrl} size={36} className="text-xs" />
                       <button
                       onClick={() => navigate(`/hr/employees/${e.id}`)}
                       className="text-[13px] font-semibold text-ink-900 hover:text-accent-700">
@@ -157,16 +167,18 @@ export function Employees() {
                             Reset password
                           </MenuItem>
                           <MenuItem
-                        icon={<UserMinusIcon className="h-4 w-4" />}
-                        danger
+                        icon={e.accountStatus === 'disabled' ? <UserCheckIcon className="h-4 w-4" /> : <UserMinusIcon className="h-4 w-4" />}
                         onClick={() => {
                           setMenuId(null);
                           const next = e.accountStatus === 'disabled' ? 'active' : 'disabled';
                           updateEmployee(e.id, { accountStatus: next });
-                          toast.success(`${e.name} ${next === 'disabled' ? 'disabled' : 're-enabled'}`);
+                          toast.success(`${e.name} ${next === 'disabled' ? 'suspended' : 'reactivated'}`);
                         }}>
-                        
-                            {e.accountStatus === 'disabled' ? 'Re-enable account' : 'Disable account'}
+
+                            {e.accountStatus === 'disabled' ? 'Reactivate account' : 'Suspend account'}
+                          </MenuItem>
+                          <MenuItem icon={<Trash2Icon className="h-4 w-4" />} danger onClick={() => removeEmployee(e)}>
+                            Delete account
                           </MenuItem>
                         </div>
                     }

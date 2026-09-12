@@ -5,6 +5,7 @@ import { ArrowLeftIcon, CoffeeIcon, KeyRoundIcon, MailIcon, PencilIcon } from 'l
 import { Panel, ProgressBar } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { StatusPill } from '../../components/ui/StatusPill';
+import { Avatar } from '../../components/ui/Avatar';
 import { WeeklyBars } from '../../components/WeeklyBars';
 import { EditEmployeeModal } from '../../components/hr/EditEmployeeModal';
 import { useApp } from '../../contexts/AppContext';
@@ -60,9 +61,7 @@ export function EmployeeDetail() {
 
       <div className="flex flex-wrap items-start justify-between gap-5 rounded-2xl border border-ink-200 bg-surface p-5 shadow-card">
         <div className="flex items-center gap-4">
-          <span className={cn('grid h-16 w-16 place-items-center rounded-2xl text-xl font-semibold', employee.tone)}>
-            {employee.initials}
-          </span>
+          <Avatar name={employee.name} tone={employee.tone} avatarUrl={employee.avatarUrl} size={64} className="rounded-2xl text-xl" />
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink-900">{employee.name}</h2>

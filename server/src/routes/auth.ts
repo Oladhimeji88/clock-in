@@ -56,3 +56,28 @@ authRouter.put("/password", requireAuth, async (req, res) => {
   ]);
   res.json({ ok: true });
 });
+
+const MAX_AVATAR_BASE64_LENGTH = 500_000; // ~350KB image, generous for a resized avatar
+
+const avatarSchema = z.object({
+  avatarUrl: z
+    .string()
+    .regex(/^data:image\/(png|jpeg|webp);base64,/, "Must be a PNG, JPEG, or WebP data URL")
+    .max(MAX_AVATAR_BASE64_LENGTH, "Image is too large — please use a smaller photo"),
+});
+
+authRouter.put("/avatar", requireAuth, async (req, res) => {
+  const parsed = avatarSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid image" });
+  }
+  await db.run("UPDATE users SET avatar = ? WHERE id = ?", [parsed.data.avatarUrl, req.user!.id]);
+  const row = await db.get("SELECT * FROM users WHERE id = ?", [req.user!.id]);
+  res.json(await serializeEmployee(row));
+});
+
+authRouter.delete("/avatar", requireAuth, async (req, res) => {
+  await db.run("UPDATE users SET avatar = NULL WHERE id = ?", [req.user!.id]);
+  const row = await db.get("SELECT * FROM users WHERE id = ?", [req.user!.id]);
+  res.json(await serializeEmployee(row));
+});

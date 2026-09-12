@@ -38,6 +38,8 @@ export function HRSettings() {
     graceMinutes: 10,
     autoEndBreak: true,
     requireBreakAfter: 6,
+    autoClockoutEnabled: company.autoClockoutHours !== null,
+    autoClockoutHours: company.autoClockoutHours ?? 10,
     annualAllowance: 25,
     requireApproval: true,
     allowSelfLeave: true,
@@ -49,8 +51,14 @@ export function HRSettings() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setForm((prev) => ({ ...prev, name: company.name, timezone: company.timezone }));
-  }, [company.name, company.timezone]);
+    setForm((prev) => ({
+      ...prev,
+      name: company.name,
+      timezone: company.timezone,
+      autoClockoutEnabled: company.autoClockoutHours !== null,
+      autoClockoutHours: company.autoClockoutHours ?? prev.autoClockoutHours
+    }));
+  }, [company.name, company.timezone, company.autoClockoutHours]);
 
   const set = <K extends keyof typeof form,>(key: K, value: (typeof form)[K]) =>
   setForm((prev) => ({ ...prev, [key]: value }));
@@ -58,7 +66,11 @@ export function HRSettings() {
   const save = async () => {
     setSaving(true);
     try {
-      await updateCompany({ name: form.name, timezone: form.timezone });
+      await updateCompany({
+        name: form.name,
+        timezone: form.timezone,
+        autoClockoutHours: form.autoClockoutEnabled ? form.autoClockoutHours : null
+      });
       toast.success('Settings saved');
     } catch {
       toast.error('Could not save company details');
@@ -164,6 +176,31 @@ export function HRSettings() {
               <span className="text-[13px] text-ink-500">minutes after scheduled start</span>
             </div>
           </Field>
+        </div>
+      </Panel>
+
+      <Panel title="Auto clock-out" description="Protects against forgotten clock-outs inflating logged hours.">
+        <div className="space-y-3">
+          <Toggle
+            checked={form.autoClockoutEnabled}
+            onChange={(v) => set('autoClockoutEnabled', v)}
+            label="Automatically clock employees out"
+            description="If someone stays clocked in past this many hours, they're clocked out automatically." />
+          {form.autoClockoutEnabled &&
+          <div className="flex items-center gap-2 border-t border-ink-100 pt-3">
+              <Input
+              id="set-auto-clockout"
+              type="number"
+              min={1}
+              max={24}
+              step={0.5}
+              value={form.autoClockoutHours}
+              onChange={(e) => set('autoClockoutHours', Number(e.target.value))}
+              className="w-24" />
+
+              <span className="text-[13px] text-ink-500">hours after clocking in</span>
+            </div>
+          }
         </div>
       </Panel>
 

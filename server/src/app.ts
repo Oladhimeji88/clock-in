@@ -12,7 +12,7 @@ const allowedOrigin = process.env.FRONTEND_URL;
 
 const app = express();
 app.use(cors(allowedOrigin ? { origin: allowedOrigin } : undefined));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" })); // headroom for base64 avatar uploads
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);

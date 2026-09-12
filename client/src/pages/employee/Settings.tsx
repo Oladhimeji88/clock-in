@@ -1,20 +1,56 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LockIcon, SlidersHorizontalIcon } from 'lucide-react';
+import { CameraIcon, LockIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
+import { Avatar } from '../../components/ui/Avatar';
 import { Field, Input, Toggle } from '../../components/ui/Field';
 import { useApp } from '../../contexts/AppContext';
 import { api, ApiError } from '../../api/client';
+import { fileToAvatarDataUrl } from '../../utils/image';
 import { cn } from '../../utils/cn';
 
 export function EmployeeSettings() {
-  const { currentUser, clockSettings, saveClockSettings } = useApp();
+  const { currentUser, clockSettings, saveClockSettings, updateAvatar } = useApp();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
   const [notif, setNotif] = useState({ clockReminder: true, breakReminder: true, leaveUpdates: true, weekly: false });
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [pwSaving, setPwSaving] = useState(false);
+
+  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    setAvatarSaving(true);
+    try {
+      const dataUrl = await fileToAvatarDataUrl(file);
+      await updateAvatar(dataUrl);
+      toast.success('Photo updated');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not update photo');
+    } finally {
+      setAvatarSaving(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarSaving(true);
+    try {
+      await updateAvatar(null);
+      toast.success('Photo removed');
+    } catch {
+      toast.error('Could not remove photo');
+    } finally {
+      setAvatarSaving(false);
+    }
+  };
 
   const updatePassword = async () => {
     if (!pw.next || pw.next !== pw.confirm) {
@@ -49,15 +85,29 @@ export function EmployeeSettings() {
 
       <Panel title="Profile">
         <div className="flex items-center gap-4">
-          <span className={cn('grid h-14 w-14 place-items-center rounded-2xl text-lg font-semibold', currentUser.tone)}>
-            {currentUser.initials}
-          </span>
-          <div>
+          <div className="group relative">
+            <Avatar name={currentUser.name} tone={currentUser.tone} avatarUrl={currentUser.avatarUrl} size={56} className="text-lg" />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarSaving}
+              aria-label="Change photo"
+              className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full border-2 border-surface bg-ink-900 text-white transition-colors duration-150 hover:bg-ink-800 disabled:opacity-50">
+              <CameraIcon className="h-3 w-3" />
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+          </div>
+          <div className="flex-1">
             <p className="text-[15px] font-semibold text-ink-900">{currentUser.name}</p>
             <p className="text-[13px] text-ink-500">
               {currentUser.jobTitle} · {currentUser.department}
             </p>
           </div>
+          {currentUser.avatarUrl &&
+          <Button size="sm" icon={<XIcon className="h-3.5 w-3.5" />} onClick={removeAvatar} disabled={avatarSaving}>
+              Remove photo
+            </Button>
+          }
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Full name" htmlFor="me-name">
