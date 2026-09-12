@@ -11,12 +11,14 @@ import { Field, Input, Toggle } from '../../components/ui/Field';
 import { useApp } from '../../contexts/AppContext';
 import { api, ApiError } from '../../api/client';
 import { fileToAvatarDataUrl } from '../../utils/image';
+import { useWidgetVisibility } from '../../hooks/useWidgetVisibility';
 import { prettyDate } from '../../utils/time';
 import { cn } from '../../utils/cn';
 
 export function EmployeeSettings() {
   const { currentUser, clockSettings, saveClockSettings, updateAvatar, leave } = useApp();
   const navigate = useNavigate();
+  const [widgetVisible, setWidgetVisible] = useWidgetVisibility();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -230,6 +232,14 @@ export function EmployeeSettings() {
           <Button icon={<SlidersHorizontalIcon className="h-4 w-4" />} onClick={() => navigate('/me/customize')}>
             Open clock designer
           </Button>
+        </div>
+        <div className="mt-4 border-t border-ink-100 pt-3">
+          <Toggle
+            checked={widgetVisible}
+            onChange={setWidgetVisible}
+            label="Floating clock widget"
+            description="A draggable mini clock that stays on screen while you use the app." />
+
         </div>
       </Panel>
 
