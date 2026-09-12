@@ -3,20 +3,25 @@
 A clock-in/clock-out system with an HR console and an employee time-tracking
 dashboard.
 
+**Live:** https://client-eta-jade-12.vercel.app (API: https://server-nine-jet-90.vercel.app)
+
 ## Stack
 
-- **Backend:** Node.js, Express, TypeScript, SQLite (Node's built-in
-  `node:sqlite`), JWT auth, bcrypt password hashing.
+- **Backend:** Node.js, Express, TypeScript, LibSQL/Turso (SQLite-compatible,
+  works locally against a file and in production against a hosted database),
+  JWT auth, bcrypt password hashing. Deployed as a Vercel serverless function.
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, Framer Motion.
+  Deployed as a static Vercel site.
 
-## Getting started
+## Getting started (local dev)
 
 ```bash
 npm run install:all   # installs server and client dependencies
 npm run dev            # runs the API (port 4000) and the web app (port 5173)
 ```
 
-Then open **http://localhost:5173**.
+Then open **http://localhost:5173**. Local dev uses a SQLite file at
+`server/data/clockin.db` — no database account needed.
 
 On first run the server seeds a default HR account and prints the
 credentials to the terminal:
@@ -27,8 +32,9 @@ password: ChangeMe123!
 ```
 
 Sign in with that account, then go to **Employees → Add employee** to create
-employee logins. Change the default HR password by editing `server/.env`
-(`DEFAULT_HR_EMAIL` / `DEFAULT_HR_PASSWORD`) before the first run.
+employee logins. Change the default local password via `server/.env`
+(`DEFAULT_HR_EMAIL` / `DEFAULT_HR_PASSWORD`) before the first run, or from
+inside the app afterward (**Settings → Your account**, once logged in).
 
 ## What's included
 
@@ -46,8 +52,9 @@ employee logins. Change the default HR password by editing `server/.env`
   badge in the sidebar.
 - Reports — department-level hours worked vs. expected, utilisation, and
   lateness, with CSV export.
-- Company settings (name, timezone) and cosmetic working-hour/leave policy
-  fields (not yet enforced server-side — see note below).
+- Company settings (name, timezone) and its own password change, plus
+  cosmetic working-hour/leave policy fields (not yet enforced server-side —
+  see note below).
 
 **Employee dashboard** (`/me`)
 - Clock In / Clock Out and Start/End Break, backed by a server-side state
@@ -59,12 +66,18 @@ employee logins. Change the default HR password by editing `server/.env`
   fields are visible — saved per user.
 - Request leave (type, dates, reason) and track its approval status; a
   history page with a weekly chart and a searchable attendance table.
+- Password change under Settings.
 
 ## Project layout
 
 ```
-server/   Express API + SQLite database (server/data/clockin.db)
-client/   React app (design system in client/src/components/ui)
+server/       Express API
+  src/app.ts    the actual Express app (routes, middleware — no listen())
+  src/index.ts  local dev entry point (imports app.ts, calls listen())
+  api/index.ts  Vercel serverless entry point (imports app.ts, no listen())
+  src/db.ts     LibSQL client — a local file by default, or DATABASE_URL/
+                DATABASE_AUTH_TOKEN for a hosted (Turso) database
+client/       React app (design system in client/src/components/ui)
 ```
 
 ## Scope notes
@@ -72,30 +85,33 @@ client/   React app (design system in client/src/components/ui)
 - **Late/absent detection** uses a fixed 10-minute grace period against each
   employee's scheduled start time — the "Late grace period" field on the HR
   Settings page is currently cosmetic (not wired to this).
-- **Company details** (name, timezone) on the Settings page persist for real;
-  the other policy toggles there (break rules, leave allowance, export
-  format, etc.) are UI-only for now — no backend enforces them yet.
+- **Company details** (name, timezone) and **password change** on the
+  Settings pages persist for real; the other policy toggles (break rules,
+  leave allowance, export format, etc.) are UI-only for now — no backend
+  enforces them yet.
 - **CSV export** is generated client-side from the same data the on-screen
   tables use, respecting whatever filters are active.
 
-## Production notes
+## Deployment
 
-- `server/.env` holds `JWT_SECRET` and the default HR credentials — replace
-  `JWT_SECRET` with a strong random value before deploying, and don't commit
-  `.env`.
-- The SQLite file lives at `server/data/clockin.db`; back it up like any
-  other database file. This won't work on a serverless host with an
-  ephemeral filesystem (e.g. Vercel functions) — see below.
-- CORS is wide open (`cors()` with no options) for local development —
-  restrict it to your real frontend origin before deploying.
+Two separate Vercel projects, both deployed from this repo:
 
-## Deploying
+- **`client/`** — Vite static build. Env var `VITE_API_URL` points it at the
+  deployed API's `/api` base (baked in at build time).
+- **`server/`** — Express app exported from `api/index.ts`, with
+  `vercel.json` rewriting every `/api/*` request to that one function
+  (see the "Project layout" note above for why it's not a bracket
+  catch-all file — that only matched single-segment paths in practice).
+  Env vars: `JWT_SECRET`, `DEFAULT_HR_EMAIL`, `DEFAULT_HR_PASSWORD`,
+  `FRONTEND_URL` (CORS allowlist), `DATABASE_URL` + `DATABASE_AUTH_TOKEN`
+  (Turso — `libsql://...` and a bearer token from `turso db tokens create`).
 
-The frontend (`client/`) is a static Vite build and deploys anywhere static
-sites do, Vercel included. The backend (`server/`) is a normal long-running
-Node/Express process with a local SQLite file — it needs a host that gives it
-a persistent filesystem and keeps the process alive (Railway, Render, Fly.io,
-a VPS, etc.), or a swap to a hosted database (e.g. Turso/LibSQL, Postgres) if
-you want it on a serverless platform. Point the frontend's `/api` requests at
-wherever the backend ends up (update the Vite proxy for local dev, and set a
-real API base URL for the production build).
+To redeploy either side after changes:
+
+```bash
+cd client && vercel deploy --prod   # or: cd server && vercel deploy --prod
+```
+
+To change an env var: `vercel env rm <NAME> production` then
+`vercel env add <NAME> production` (from inside the relevant project
+directory), then redeploy so the new value takes effect.
