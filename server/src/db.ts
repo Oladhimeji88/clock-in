@@ -1,14 +1,50 @@
-import { DatabaseSync } from "node:sqlite";
+import { createClient } from "@libsql/client";
 import bcrypt from "bcryptjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, "..", "data", "clockin.db");
+const defaultLocalPath = path.join(__dirname, "..", "data", "clockin.db");
 
-export const db = new DatabaseSync(dbPath, { enableForeignKeyConstraints: true });
-db.exec("PRAGMA journal_mode = WAL");
+const client = createClient({
+  url: process.env.DATABASE_URL ?? `file:${defaultLocalPath}`,
+  authToken: process.env.DATABASE_AUTH_TOKEN,
+});
+
+export type SQLValue = string | number | bigint | boolean | Uint8Array | null | undefined;
+
+export interface RunResult {
+  changes: number;
+  lastInsertRowid: bigint | number | undefined;
+}
+
+/** Thin async wrapper around the LibSQL client, shaped like the sync
+ * better-sqlite3 / node:sqlite API this project was originally written
+ * against, so route code only had to add `await`. */
+export const db = {
+  async get(sql: string, params: SQLValue[] = []): Promise<Record<string, unknown> | undefined> {
+    const rs = await client.execute({ sql, args: params as never[] });
+    return rs.rows[0] as unknown as Record<string, unknown> | undefined;
+  },
+  async all(sql: string, params: SQLValue[] = []): Promise<Record<string, unknown>[]> {
+    const rs = await client.execute({ sql, args: params as never[] });
+    return rs.rows as unknown as Record<string, unknown>[];
+  },
+  async run(sql: string, params: SQLValue[] = []): Promise<RunResult> {
+    const rs = await client.execute({ sql, args: params as never[] });
+    return { changes: rs.rowsAffected, lastInsertRowid: rs.lastInsertRowid };
+  },
+  async exec(sql: string): Promise<void> {
+    await client.executeMultiple(sql);
+  },
+};
+
+try {
+  await client.execute("PRAGMA journal_mode = WAL");
+} catch {
+  // Not supported in remote/HTTP mode — harmless to skip.
+}
 
 const DEFAULT_CLOCK_SETTINGS = JSON.stringify({
   style: "segmented",
@@ -23,7 +59,7 @@ const DEFAULT_CLOCK_SETTINGS = JSON.stringify({
   showProgress: true,
 });
 
-db.exec(`
+await db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -72,17 +108,18 @@ db.exec(`
   );
 `);
 
-function seedDefaults() {
-  const existingHr = db.prepare("SELECT id FROM users WHERE role = 'hr' LIMIT 1").get();
+async function seedDefaults() {
+  const existingHr = await db.get("SELECT id FROM users WHERE role = 'hr' LIMIT 1");
   if (!existingHr) {
     const email = process.env.DEFAULT_HR_EMAIL || "hr@clockin.app";
     const password = process.env.DEFAULT_HR_PASSWORD || "ChangeMe123!";
     const passwordHash = bcrypt.hashSync(password, 10);
 
-    db.prepare(
+    await db.run(
       `INSERT INTO users (id, email, password_hash, name, role, department, job_title)
-       VALUES (?, ?, ?, ?, 'hr', 'People Operations', 'HR Administrator')`
-    ).run(crypto.randomUUID(), email, passwordHash, "HR Administrator");
+       VALUES (?, ?, ?, ?, 'hr', 'People Operations', 'HR Administrator')`,
+      [crypto.randomUUID(), email, passwordHash, "HR Administrator"]
+    );
 
     console.log("─".repeat(56));
     console.log(" Default HR account created:");
@@ -92,10 +129,10 @@ function seedDefaults() {
     console.log("─".repeat(56));
   }
 
-  const existingCompany = db.prepare("SELECT id FROM company_settings WHERE id = 'default'").get();
+  const existingCompany = await db.get("SELECT id FROM company_settings WHERE id = 'default'");
   if (!existingCompany) {
-    db.prepare("INSERT INTO company_settings (id) VALUES ('default')").run();
+    await db.run("INSERT INTO company_settings (id) VALUES ('default')");
   }
 }
 
-seedDefaults();
+await seedDefaults();

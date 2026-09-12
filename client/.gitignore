@@ -26,3 +26,4 @@ dist-ssr
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+.tsbuild-node

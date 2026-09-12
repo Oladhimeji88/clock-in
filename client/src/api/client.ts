@@ -37,6 +37,11 @@ export class ApiError extends Error {
   }
 }
 
+// In production, point this at the deployed API (e.g. https://your-api.vercel.app/api).
+// Left unset, requests go to a relative /api — the Vite dev server proxies that to
+// localhost:4000 (see vite.config.ts), and a same-origin deployment would serve it directly.
+const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -45,7 +50,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     let message = 'Something went wrong. Please try again.';
     try {
@@ -101,7 +106,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password })
     }),
-    me: () => request<Employee>('/auth/me')
+    me: () => request<Employee>('/auth/me'),
+    changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ok: boolean;}>('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    })
   },
   employees: {
     list: () => request<Employee[]>('/employees'),

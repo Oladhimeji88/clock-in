@@ -29,7 +29,7 @@ const submitSchema = z.object({
   reason: z.string().default(""),
 });
 
-leaveRouter.post("/", requireRole("employee"), (req, res) => {
+leaveRouter.post("/", requireRole("employee"), async (req, res) => {
   const parsed = submitSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid leave request" });
   const { type, startDate, endDate, reason } = parsed.data;
@@ -39,36 +39,38 @@ leaveRouter.post("/", requireRole("employee"), (req, res) => {
   const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1);
 
   const id = crypto.randomUUID();
-  db.prepare(
+  await db.run(
     `INSERT INTO leave_requests (id, employee_id, type, start_date, end_date, days, status, reason, submitted_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)`
-  ).run(id, req.user!.id, type, startDate, endDate, days, reason, dateKey(Date.now()));
+     VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)`,
+    [id, req.user!.id, type, startDate, endDate, days, reason, dateKey(Date.now())]
+  );
 
-  const row = db.prepare("SELECT * FROM leave_requests WHERE id = ?").get(id);
+  const row = await db.get("SELECT * FROM leave_requests WHERE id = ?", [id]);
   res.status(201).json(serializeLeave(row));
 });
 
-leaveRouter.get("/me", requireRole("employee"), (req, res) => {
-  const rows = db
-    .prepare("SELECT * FROM leave_requests WHERE employee_id = ? ORDER BY submitted_at DESC")
-    .all(req.user!.id) as any[];
+leaveRouter.get("/me", requireRole("employee"), async (req, res) => {
+  const rows = await db.all("SELECT * FROM leave_requests WHERE employee_id = ? ORDER BY submitted_at DESC", [
+    req.user!.id,
+  ]);
   res.json(rows.map(serializeLeave));
 });
 
-leaveRouter.get("/", requireRole("hr"), (_req, res) => {
-  const rows = db.prepare("SELECT * FROM leave_requests ORDER BY submitted_at DESC").all() as any[];
+leaveRouter.get("/", requireRole("hr"), async (_req, res) => {
+  const rows = await db.all("SELECT * FROM leave_requests ORDER BY submitted_at DESC");
   res.json(rows.map(serializeLeave));
 });
 
 const decisionSchema = z.object({ status: z.enum(["Approved", "Rejected"]) });
 
-leaveRouter.put("/:id", requireRole("hr"), (req, res) => {
+leaveRouter.put("/:id", requireRole("hr"), async (req, res) => {
   const parsed = decisionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid status" });
-  const result = db
-    .prepare("UPDATE leave_requests SET status = ? WHERE id = ?")
-    .run(parsed.data.status, req.params.id);
+  const result = await db.run("UPDATE leave_requests SET status = ? WHERE id = ?", [
+    parsed.data.status,
+    req.params.id,
+  ]);
   if (result.changes === 0) return res.status(404).json({ error: "Leave request not found" });
-  const row = db.prepare("SELECT * FROM leave_requests WHERE id = ?").get(req.params.id);
+  const row = await db.get("SELECT * FROM leave_requests WHERE id = ?", [req.params.id]);
   res.json(serializeLeave(row));
 });

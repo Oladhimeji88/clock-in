@@ -4,9 +4,30 @@ import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Field, Input, Select, Toggle } from '../../components/ui/Field';
 import { useApp } from '../../contexts/AppContext';
+import { api, ApiError } from '../../api/client';
 
 export function HRSettings() {
   const { company, updateCompany } = useApp();
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const updatePassword = async () => {
+    if (!pw.next || pw.next !== pw.confirm) {
+      toast.error('New password and confirmation must match');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await api.auth.changePassword(pw.current, pw.next);
+      toast.success('Password updated');
+      setPw({ current: '', next: '', confirm: '' });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not update password');
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   const [form, setForm] = useState({
     name: company.name,
     timezone: company.timezone,
@@ -73,6 +94,41 @@ export function HRSettings() {
             </Select>
           </Field>
         </div>
+      </Panel>
+
+      <Panel title="Your account" description="Change the password for your own HR login.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Current password" htmlFor="hr-pass-old">
+            <Input
+              id="hr-pass-old"
+              type="password"
+              placeholder="••••••••"
+              value={pw.current}
+              onChange={(e) => setPw((p) => ({ ...p, current: e.target.value }))} />
+
+          </Field>
+          <Field label="New password" htmlFor="hr-pass-new">
+            <Input
+              id="hr-pass-new"
+              type="password"
+              placeholder="••••••••"
+              value={pw.next}
+              onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))} />
+
+          </Field>
+          <Field label="Confirm password" htmlFor="hr-pass-confirm">
+            <Input
+              id="hr-pass-confirm"
+              type="password"
+              placeholder="••••••••"
+              value={pw.confirm}
+              onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))} />
+
+          </Field>
+        </div>
+        <Button className="mt-4" onClick={updatePassword} disabled={pwSaving}>
+          {pwSaving ? 'Updating…' : 'Update password'}
+        </Button>
       </Panel>
 
       <Panel title="Working hours defaults" description="Applied to every new employee account.">

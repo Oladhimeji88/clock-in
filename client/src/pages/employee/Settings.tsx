@@ -6,12 +6,32 @@ import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Field, Input, Toggle } from '../../components/ui/Field';
 import { useApp } from '../../contexts/AppContext';
+import { api, ApiError } from '../../api/client';
 import { cn } from '../../utils/cn';
 
 export function EmployeeSettings() {
   const { currentUser, clockSettings, saveClockSettings } = useApp();
   const navigate = useNavigate();
   const [notif, setNotif] = useState({ clockReminder: true, breakReminder: true, leaveUpdates: true, weekly: false });
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const updatePassword = async () => {
+    if (!pw.next || pw.next !== pw.confirm) {
+      toast.error('New password and confirmation must match');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await api.auth.changePassword(pw.current, pw.next);
+      toast.success('Password updated');
+      setPw({ current: '', next: '', confirm: '' });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not update password');
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -67,17 +87,35 @@ export function EmployeeSettings() {
       <Panel title="Password">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Current password" htmlFor="me-pass-old">
-            <Input id="me-pass-old" type="password" placeholder="••••••••" />
+            <Input
+              id="me-pass-old"
+              type="password"
+              placeholder="••••••••"
+              value={pw.current}
+              onChange={(e) => setPw((p) => ({ ...p, current: e.target.value }))} />
+
           </Field>
           <Field label="New password" htmlFor="me-pass-new">
-            <Input id="me-pass-new" type="password" placeholder="••••••••" />
+            <Input
+              id="me-pass-new"
+              type="password"
+              placeholder="••••••••"
+              value={pw.next}
+              onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))} />
+
           </Field>
           <Field label="Confirm password" htmlFor="me-pass-confirm">
-            <Input id="me-pass-confirm" type="password" placeholder="••••••••" />
+            <Input
+              id="me-pass-confirm"
+              type="password"
+              placeholder="••••••••"
+              value={pw.confirm}
+              onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))} />
+
           </Field>
         </div>
-        <Button className="mt-4" onClick={() => toast.success('Password updated')}>
-          Update password
+        <Button className="mt-4" onClick={updatePassword} disabled={pwSaving}>
+          {pwSaving ? 'Updating…' : 'Update password'}
         </Button>
       </Panel>
 

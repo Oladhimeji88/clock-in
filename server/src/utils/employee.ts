@@ -41,14 +41,15 @@ function formatLastClockIn(ts: number): string {
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${time}`;
 }
 
-export function lastClockInFor(userId: string): string {
-  const row = db
-    .prepare("SELECT ts FROM attendance_events WHERE user_id = ? AND type = 'clock_in' ORDER BY ts DESC LIMIT 1")
-    .get(userId) as { ts: number } | undefined;
-  return row ? formatLastClockIn(row.ts) : "—";
+export async function lastClockInFor(userId: string): Promise<string> {
+  const row = (await db.get(
+    "SELECT ts FROM attendance_events WHERE user_id = ? AND type = 'clock_in' ORDER BY ts DESC LIMIT 1",
+    [userId]
+  )) as { ts: number } | undefined;
+  return row ? formatLastClockIn(Number(row.ts)) : "—";
 }
 
-export function serializeEmployee(row: any) {
+export async function serializeEmployee(row: any) {
   return {
     id: row.id,
     name: row.name,
@@ -64,7 +65,7 @@ export function serializeEmployee(row: any) {
     accountStatus: row.account_status,
     initials: initialsFor(row.name),
     tone: toneFor(row.id),
-    lastClockIn: lastClockInFor(row.id),
+    lastClockIn: await lastClockInFor(row.id),
     clockSettings: JSON.parse(row.clock_settings),
     createdAt: row.created_at,
   };
