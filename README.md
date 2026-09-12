@@ -3,7 +3,7 @@
 A clock-in/clock-out system with an HR console and an employee time-tracking
 dashboard.
 
-**Live:** https://client-eta-jade-12.vercel.app (API: https://server-nine-jet-90.vercel.app)
+**Live:** https://tech4mation-clockin.vercel.app (API: https://tech4mation-clockin-api.vercel.app)
 
 ## Stack
 
@@ -41,9 +41,10 @@ inside the app afterward (**Settings → Your account**, once logged in).
 **HR console** (`/hr`)
 - Dashboard with live headcount, currently-clocked-in / on-break / on-leave /
   late counts, and a live per-employee attendance table.
-- Employee directory: create accounts (name, email, temporary password,
-  department, job title, working days, schedule, break allowance), edit
-  details, enable/disable accounts.
+- Employee directory: create accounts as either an employee (name, email,
+  temporary password, department, job title, working days, schedule, break
+  allowance) or a co-admin HR account; edit details; suspend/reactivate or
+  permanently delete accounts.
 - Employee profile page with today's status, a weekly hours chart, and
   attendance/leave/break history.
 - Attendance and Time Records explorers — filter by employee, department,
@@ -52,13 +53,14 @@ inside the app afterward (**Settings → Your account**, once logged in).
   badge in the sidebar.
 - Reports — department-level hours worked vs. expected, utilisation, and
   lateness, with CSV export.
-- Company settings (name, timezone) and its own password change, plus
-  cosmetic working-hour/leave policy fields (not yet enforced server-side —
-  see note below).
+- Company settings: name, timezone, own password change, and a real
+  auto clock-out threshold (see below), plus cosmetic working-hour/leave
+  policy fields (not yet enforced server-side — see note below).
 
 **Employee dashboard** (`/me`)
 - Clock In / Clock Out and Start/End Break, backed by a server-side state
-  machine (invalid transitions like double clock-in are rejected).
+  machine (invalid transitions like double clock-in are rejected) — plus an
+  optional company-wide auto clock-out after N hours, enforced server-side.
 - A live circular progress ring showing hours worked against the HR-set
   daily target, plus a draggable floating mini clock widget.
 - A full-screen clock view (Fullscreen API) for a kiosk-style display.
@@ -66,7 +68,12 @@ inside the app afterward (**Settings → Your account**, once logged in).
   fields are visible — saved per user.
 - Request leave (type, dates, reason) and track its approval status; a
   history page with a weekly chart and a searchable attendance table.
-- Password change under Settings.
+- Profile photo upload (resized/compressed client-side) and password change
+  under Settings.
+
+**Installable as a PWA** — add to home screen / install from the browser on
+desktop or mobile, with offline-friendly caching for static assets (API
+calls always hit the network, never cached).
 
 ## Project layout
 
@@ -91,6 +98,10 @@ client/       React app (design system in client/src/components/ui)
   enforces them yet.
 - **CSV export** is generated client-side from the same data the on-screen
   tables use, respecting whatever filters are active.
+- **Auto clock-out** is enforced lazily (on the next read of the employee's
+  session or HR's "today" view), not via a cron job — a still-clocked-in
+  employee is corrected within a poll cycle (~15–20s) after crossing the
+  threshold, not necessarily the instant it's crossed.
 
 ## Deployment
 
@@ -115,3 +126,16 @@ cd client && vercel deploy --prod   # or: cd server && vercel deploy --prod
 To change an env var: `vercel env rm <NAME> production` then
 `vercel env add <NAME> production` (from inside the relevant project
 directory), then redeploy so the new value takes effect.
+
+**The clean `tech4mation-clockin(.api).vercel.app` domains are manual
+aliases**, not the project's auto-generated domain — they don't
+automatically follow new production deploys. After `vercel deploy --prod`,
+if the clean URL doesn't reflect the new build, re-point it:
+
+```bash
+vercel alias set <new-deployment-url> tech4mation-clockin.vercel.app
+# or, for the API: vercel alias set <new-deployment-url> tech4mation-clockin-api.vercel.app
+```
+
+The deployment URL is printed at the end of `vercel deploy --prod`
+(the `"url"` field).
