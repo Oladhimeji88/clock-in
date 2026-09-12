@@ -77,7 +77,7 @@ export interface ClockSession {
   breaks: BreakSpan[];
 }
 
-export type ClockStyle = 'digital' | 'segmented' | 'minimal' | 'modern' | 'retro';
+export type ClockStyle = 'digital' | 'segmented' | 'minimal' | 'modern' | 'retro' | 'pixel' | 'neon';
 export type ClockTheme = 'dark' | 'light' | 'minimal' | 'glass' | 'retro';
 
 export interface ClockSettings {

@@ -75,7 +75,22 @@ const STYLE_FONT: Record<ClockStyle, string> = {
   segmented: 'font-seg tracking-[0.02em]',
   minimal: 'font-sans font-light tracking-[-0.04em]',
   modern: 'font-display font-medium tracking-[-0.01em]',
-  retro: 'font-seg tracking-[0.06em]'
+  retro: 'font-seg tracking-[0.06em]',
+  pixel: 'font-pixel tracking-[0.02em]',
+  neon: 'font-display font-bold tracking-[0.04em]'
+};
+
+const NEON_GLOW =
+'0 0 6px rgba(231,69,76,0.95), 0 0 18px rgba(231,69,76,0.7), 0 0 40px rgba(231,69,76,0.45), 0 0 70px rgba(231,69,76,0.25)';
+
+// Press Start 2P runs much wider per character than the other fonts, so the
+// pixel style needs its own, smaller size scale to stay inside the same box.
+const PIXEL_DIGIT_SIZE: Record<ClockSize, string> = {
+  mini: 'text-[15px]',
+  sm: 'text-[21px]',
+  md: 'text-[27px] sm:text-[39px]',
+  lg: 'text-[37px] sm:text-[53px]',
+  xl: 'text-[clamp(1.8rem,9vw,7.5rem)]'
 };
 
 const SIZE: Record<ClockSize, {pad: string;digits: string;radius: string;meta: string;gap: string;}> = {
@@ -165,7 +180,9 @@ export function ClockFace({
   const date = new Date(now);
   const time = formatTimeOfDay(date, settings.hour12, settings.showSeconds);
   const ghost = time.replace(/\d/g, '8');
-  const isSegmented = settings.style === 'segmented' || settings.style === 'retro';
+  const isSegmented = settings.style === 'segmented' || settings.style === 'retro' || settings.style === 'pixel';
+  const isNeon = settings.style === 'neon';
+  const digitSize = settings.style === 'pixel' ? PIXEL_DIGIT_SIZE[size] : sizes.digits;
   const lightTheme = settings.theme === 'light' || settings.theme === 'minimal';
   const statusTone = lightTheme ? STATUS_TONE_LIGHT[status] : STATUS_TONE[status];
   const targetLabel = `${String(Math.floor(expectedHours)).padStart(2, '0')}:${String(
@@ -225,21 +242,28 @@ export function ClockFace({
           {isSegmented &&
           <span
             aria-hidden="true"
-            className={cn('absolute inset-0 select-none leading-none opacity-[0.09]', STYLE_FONT[settings.style], sizes.digits, theme.digits)}>
-            
+            className={cn('absolute inset-0 select-none leading-none opacity-[0.09]', STYLE_FONT[settings.style], digitSize, theme.digits)}>
+
               {ghost}
             </span>
           }
           <span
-            className={cn('num relative block leading-none', STYLE_FONT[settings.style], sizes.digits, theme.digits)}
+            className={cn(
+              'num relative block leading-none',
+              STYLE_FONT[settings.style],
+              digitSize,
+              isNeon ? 'text-accent-400' : theme.digits
+            )}
             style={
+            isNeon ?
+            { textShadow: NEON_GLOW } :
             settings.theme === 'retro' ?
             { textShadow: '0 0 18px rgba(252,211,77,0.45)' } :
             settings.theme === 'dark' || settings.theme === 'glass' ?
             { textShadow: '0 0 24px rgba(255,255,255,0.18)' } :
             undefined
             }>
-            
+
             {time}
           </span>
         </div>

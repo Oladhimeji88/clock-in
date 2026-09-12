@@ -46,6 +46,7 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
         seg: ['"Share Tech Mono"', 'ui-monospace', 'monospace'],
         display: ['Orbitron', 'Inter', 'sans-serif'],
+        pixel: ['"Press Start 2P"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
         card: '0 1px 2px rgba(12,12,14,0.04), 0 1px 3px rgba(12,12,14,0.05)',

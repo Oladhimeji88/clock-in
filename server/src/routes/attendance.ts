@@ -103,7 +103,7 @@ attendanceRouter.post("/break/start", ...employeeOnly, transition(["working"], "
 attendanceRouter.post("/break/end", ...employeeOnly, transition(["break"], "break_end"));
 
 const clockSettingsSchema = z.object({
-  style: z.enum(["digital", "segmented", "minimal", "modern", "retro"]),
+  style: z.enum(["digital", "segmented", "minimal", "modern", "retro", "pixel", "neon"]),
   theme: z.enum(["dark", "light", "minimal", "glass", "retro"]),
   hour12: z.boolean(),
   showSeconds: z.boolean(),

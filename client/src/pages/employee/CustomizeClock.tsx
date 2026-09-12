@@ -17,7 +17,9 @@ const STYLES: {key: ClockStyle;label: string;hint: string;}[] = [
 { key: 'digital', label: 'Digital', hint: 'Monospace precision' },
 { key: 'minimal', label: 'Minimal', hint: 'Light, wide-set' },
 { key: 'modern', label: 'Modern', hint: 'Geometric sans' },
-{ key: 'retro', label: 'Retro', hint: 'Amber alarm clock' }];
+{ key: 'retro', label: 'Retro', hint: 'Amber alarm clock' },
+{ key: 'pixel', label: 'Pixel', hint: '8-bit pixel display' },
+{ key: 'neon', label: 'Neon', hint: 'Glowing neon sign' }];
 
 
 const THEMES: {key: ClockTheme;label: string;swatch: string;}[] = [
@@ -127,9 +129,11 @@ export function CustomizeClock() {
                     s.key === 'digital' && 'font-mono',
                     (s.key === 'segmented' || s.key === 'retro') && 'font-seg',
                     s.key === 'minimal' && 'font-sans font-light tracking-tight',
-                    s.key === 'modern' && 'font-display'
+                    s.key === 'modern' && 'font-display',
+                    s.key === 'pixel' && 'font-pixel text-[11px]',
+                    s.key === 'neon' && 'font-display font-bold text-accent-600'
                   )}>
-                  
+
                     09:42
                   </span>
                   <span className="mt-2 block text-[13px] font-medium text-ink-900">{s.label}</span>

@@ -8,7 +8,7 @@ import { sessionTotals } from '../../utils/time';
 import { cn } from '../../utils/cn';
 import type { ClockStyle, ClockTheme } from '../../types';
 
-const STYLES: ClockStyle[] = ['segmented', 'digital', 'minimal', 'modern', 'retro'];
+const STYLES: ClockStyle[] = ['segmented', 'digital', 'minimal', 'modern', 'retro', 'pixel', 'neon'];
 const THEMES: ClockTheme[] = ['dark', 'light', 'minimal', 'glass', 'retro'];
 
 export function FullScreenClock() {
