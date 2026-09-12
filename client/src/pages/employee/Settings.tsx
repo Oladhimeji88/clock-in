@@ -1,21 +1,25 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CameraIcon, LockIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
+import { CameraIcon, LockIcon, PalmtreeIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Avatar } from '../../components/ui/Avatar';
+import { StatusPill } from '../../components/ui/StatusPill';
+import { RequestLeaveModal } from '../../components/employee/RequestLeaveModal';
 import { Field, Input, Toggle } from '../../components/ui/Field';
 import { useApp } from '../../contexts/AppContext';
 import { api, ApiError } from '../../api/client';
 import { fileToAvatarDataUrl } from '../../utils/image';
+import { prettyDate } from '../../utils/time';
 import { cn } from '../../utils/cn';
 
 export function EmployeeSettings() {
-  const { currentUser, clockSettings, saveClockSettings, updateAvatar } = useApp();
+  const { currentUser, clockSettings, saveClockSettings, updateAvatar, leave } = useApp();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [notif, setNotif] = useState({ clockReminder: true, breakReminder: true, leaveUpdates: true, weekly: false });
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [pwSaving, setPwSaving] = useState(false);
@@ -70,6 +74,9 @@ export function EmployeeSettings() {
   };
 
   if (!currentUser) return null;
+
+  const myLeave = leave.filter((l) => l.employeeId === currentUser.id);
+  const pendingLeave = myLeave.filter((l) => l.status === 'Pending');
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -169,6 +176,38 @@ export function EmployeeSettings() {
         </Button>
       </Panel>
 
+      <Panel
+        title="Leave"
+        description={
+        pendingLeave.length > 0 ?
+        `${pendingLeave.length} request${pendingLeave.length > 1 ? 's' : ''} pending approval` :
+        'Request time off and track approval status.'
+        }
+        actions={
+        <Button variant="primary" size="sm" icon={<PalmtreeIcon className="h-3.5 w-3.5" />} onClick={() => setLeaveOpen(true)}>
+            Request leave
+          </Button>
+        }>
+
+        {myLeave.length === 0 ?
+        <p className="py-6 text-center text-[13px] text-ink-500">You haven't requested leave yet.</p> :
+
+        <ul className="divide-y divide-ink-100">
+            {myLeave.slice(0, 4).map((l) =>
+          <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-[13px] font-semibold text-ink-900">{l.type}</p>
+                  <p className="num text-xs text-ink-400">
+                    {prettyDate(l.startDate)} → {prettyDate(l.endDate)} · {l.days} days
+                  </p>
+                </div>
+                <StatusPill status={l.status} />
+              </li>
+          )}
+          </ul>
+        }
+      </Panel>
+
       <Panel title="Clock appearance" description={`${clockSettings.style} style · ${clockSettings.theme} theme`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1 rounded-lg bg-ink-100 p-0.5">
@@ -228,6 +267,8 @@ export function EmployeeSettings() {
           </div>
         </div>
       </Panel>
+
+      <RequestLeaveModal open={leaveOpen} onClose={() => setLeaveOpen(false)} />
     </div>);
 
 }

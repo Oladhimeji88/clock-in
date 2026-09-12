@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -8,7 +7,6 @@ import {
   ExpandIcon,
   LogInIcon,
   LogOutIcon,
-  PalmtreeIcon,
   PlayIcon,
   SlidersHorizontalIcon } from
 'lucide-react';
@@ -18,7 +16,6 @@ import { Button } from '../../components/ui/Button';
 import { Panel } from '../../components/ui/Panel';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { WeeklyBars } from '../../components/WeeklyBars';
-import { RequestLeaveModal } from '../../components/employee/RequestLeaveModal';
 import { useApp } from '../../contexts/AppContext';
 import { useNow } from '../../hooks/useNow';
 import { useOwnRecords } from '../../hooks/useRecords';
@@ -36,10 +33,9 @@ import {
 '../../utils/time';
 
 export function EmployeeClock() {
-  const { currentUser, session, clockSettings, clockIn, clockOut, startBreak, endBreak, resetDay, leave } = useApp();
+  const { currentUser, session, clockSettings, clockIn, clockOut, startBreak, endBreak, resetDay } = useApp();
   const now = useNow();
   const navigate = useNavigate();
-  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const today = new Date();
   const twoWeeksAgo = new Date(today);
@@ -52,7 +48,6 @@ export function EmployeeClock() {
   const expectedMin = Math.round(currentUser.expectedHours * 60);
   const week = weeklyMinutesFromRecords(records);
   const weekTotal = week.reduce((s, d) => s + d.minutes, 0);
-  const pendingLeave = leave.filter((l) => l.employeeId === currentUser.id && l.status === 'Pending');
   const clockedIn = Boolean(session.clockInAt);
   const done = session.status === 'out';
 
@@ -217,20 +212,6 @@ export function EmployeeClock() {
                 </div>
               )}
             </dl>
-
-            <Button
-              className="mt-4"
-              fullWidth
-              icon={<PalmtreeIcon className="h-4 w-4" />}
-              onClick={() => setLeaveOpen(true)}>
-              
-              Request leave
-            </Button>
-            {pendingLeave.length > 0 &&
-            <p className="mt-2 text-center text-xs text-ink-400">
-                {pendingLeave.length} request{pendingLeave.length > 1 ? 's' : ''} pending approval
-              </p>
-            }
           </div>
         </Panel>
       </div>
@@ -257,8 +238,6 @@ export function EmployeeClock() {
       <Panel title="This week" description={`${formatHm(weekTotal)} logged across your working days`}>
         <WeeklyBars data={week} expectedMin={expectedMin} />
       </Panel>
-
-      <RequestLeaveModal open={leaveOpen} onClose={() => setLeaveOpen(false)} />
     </div>);
 
 }
