@@ -12,11 +12,12 @@ const STYLES: ClockStyle[] = ['segmented', 'digital', 'minimal', 'modern', 'retr
 const THEMES: ClockTheme[] = ['dark', 'light', 'minimal', 'glass', 'retro'];
 
 export function FullScreenClock() {
-  const { currentUser, session, clockSettings, saveClockSettings } = useApp();
+  const { authReady, currentUser, session, clockSettings, saveClockSettings } = useApp();
   const now = useNow();
   const navigate = useNavigate();
   const [panelOpen, setPanelOpen] = useState(false);
 
+  if (!authReady) return null;
   if (!currentUser) return <Navigate to="/" replace />;
 
   const totals = sessionTotals(session, now, currentUser.expectedHours);
