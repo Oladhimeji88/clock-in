@@ -129,33 +129,33 @@ export function EmployeeClock() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
               {!clockedIn ?
-            <Button variant="primary" size="xl" fullWidth icon={<LogInIcon className="h-5 w-5" />} onClick={handle.in}>
+            <Button variant="primary" size="xl" className="sm:flex-1" icon={<LogInIcon className="h-5 w-5" />} onClick={handle.in}>
                   Clock In
                 </Button> :
 
             <Button
               variant="dark"
               size="xl"
-              fullWidth
+              className="sm:flex-1"
               icon={<LogOutIcon className="h-5 w-5" />}
               onClick={handle.out}>
-              
+
                   Clock Out
                 </Button>
             }
 
               {session.status === 'break' ?
-            <Button size="xl" className="sm:w-[210px]" icon={<PlayIcon className="h-4 w-4" />} onClick={handle.breakEnd}>
+            <Button size="xl" className="sm:flex-1" icon={<PlayIcon className="h-4 w-4" />} onClick={handle.breakEnd}>
                   End Break
                 </Button> :
 
             <Button
               size="xl"
-              className="sm:w-[210px]"
+              className="sm:flex-1"
               icon={<CoffeeIcon className="h-4 w-4" />}
               disabled={session.status !== 'working'}
               onClick={handle.breakStart}>
-              
+
                   Start Break
                 </Button>
             }
