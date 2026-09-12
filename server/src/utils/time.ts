@@ -79,6 +79,61 @@ export function summarizeEvents(events: AttendanceEvent[], asOf: number): Summar
   return { status, workedMs, breakMs, firstClockIn, lastClockOut, lastBreakStart, lastBreakEnd, ongoing };
 }
 
+export type SessionStatus = "not_in" | "working" | "break" | "out";
+
+export interface BreakSpan {
+  start: number;
+  end: number | null;
+}
+
+export interface ClockSession {
+  status: SessionStatus;
+  clockInAt: number | null;
+  clockOutAt: number | null;
+  breaks: BreakSpan[];
+}
+
+/**
+ * Derives the live session for the current clock-in cycle: everything since
+ * the most recent clock_in event. A fresh clock_in always starts a clean
+ * session (mirrors clocking out and back in during the same day).
+ */
+export function deriveSession(events: AttendanceEvent[]): ClockSession {
+  const sorted = [...events].sort((a, b) => a.ts - b.ts);
+  let lastInIndex = -1;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (sorted[i].type === "clock_in") {
+      lastInIndex = i;
+      break;
+    }
+  }
+  if (lastInIndex === -1) {
+    return { status: "not_in", clockInAt: null, clockOutAt: null, breaks: [] };
+  }
+
+  const clockInAt = sorted[lastInIndex].ts;
+  const breaks: BreakSpan[] = [];
+  let clockOutAt: number | null = null;
+  let status: SessionStatus = "working";
+
+  for (let i = lastInIndex + 1; i < sorted.length; i++) {
+    const e = sorted[i];
+    if (e.type === "break_start") {
+      breaks.push({ start: e.ts, end: null });
+      status = "break";
+    } else if (e.type === "break_end") {
+      const open = breaks.find((b) => b.end === null);
+      if (open) open.end = e.ts;
+      status = "working";
+    } else if (e.type === "clock_out") {
+      clockOutAt = e.ts;
+      status = "out";
+    }
+  }
+
+  return { status, clockInAt, clockOutAt, breaks };
+}
+
 export function startOfDay(date: Date): number {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
