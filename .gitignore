@@ -3,4 +3,3 @@ dist
 *.log
 server/data/*.db*
 .DS_Store
-config.bat
